@@ -14,7 +14,7 @@ struct TabViews: View {
                 .tabItem {
                     Label("Messages", systemImage: "message" )
                 }
-            Text("Future Chat room")
+            OpenChatRoom()
                 .tabItem {
                     Label("Support Room", systemImage: "person.3")
                 }

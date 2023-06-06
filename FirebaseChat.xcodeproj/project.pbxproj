@@ -49,6 +49,7 @@
 		72FAF58A2A1FD1C800AB9715 /* RecentMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentMessage.swift; sourceTree = "<group>"; };
 		72FAF58C2A1FF5B100AB9715 /* FirebaseConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseConstants.swift; sourceTree = "<group>"; };
 		72FAF58F2A212CA600AB9715 /* TabViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabViews.swift; sourceTree = "<group>"; };
+		72FAF5912A2682A200AB9715 /* FirebaseChat.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FirebaseChat.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +124,7 @@
 		7264C88F2A12C23400FA90E0 /* FirebaseChat */ = {
 			isa = PBXGroup;
 			children = (
+				72FAF5912A2682A200AB9715 /* FirebaseChat.entitlements */,
 				72FAF58E2A212C9100AB9715 /* Tabs */,
 				7238849C2A16C0E500C37F42 /* Chat */,
 				723884942A154AEB00C37F42 /* Utils */,
@@ -384,8 +386,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = FirebaseChat/FirebaseChat.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"FirebaseChat/Preview Content\"";
 				DEVELOPMENT_TEAM = TD5M7MVFQT;
 				ENABLE_PREVIEWS = YES;
@@ -413,8 +417,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = FirebaseChat/FirebaseChat.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"FirebaseChat/Preview Content\"";
 				DEVELOPMENT_TEAM = TD5M7MVFQT;
 				ENABLE_PREVIEWS = YES;

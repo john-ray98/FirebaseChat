@@ -14,6 +14,7 @@ struct LoginView: View {
     @State private var isLoginMode = false
     @State private var email = ""
     @State private var password = ""
+    @State private var username = ""
     
     @State private var shouldShowImagePicker = false
     
@@ -138,9 +139,11 @@ struct LoginView: View {
             
             print("Successfully created user: \(result?.user.uid ?? "")")
             
-            self.loginStatusMessage = "Successfully created user: \(result?.user.uid ?? "")"
+            self.loginStatusMessage = "Successfully created user: \(result?.user.uid ?? ""). Please go to login."
             
             self.persistImageToStorage()
+            
+            self.didCompleteLoginProcess()
         }
     }
     

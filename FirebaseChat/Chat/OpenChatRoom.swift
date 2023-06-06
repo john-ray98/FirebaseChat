@@ -5,12 +5,18 @@
 //  Created by John Ray on 5/24/23.
 //
 
-/*import SwiftUI
+import SwiftUI
 import FirebaseDatabase
+import FirebaseAuth
+
+struct User {
+    let name: String
+    let email: String
+}
 
 struct ChatRoomMessage: Identifiable {
     let id = UUID()
-    let sender: String
+    let sender: User
     let message: String
     let timestamp: Double
 }
@@ -26,10 +32,15 @@ class ChatRoomViewModel: ObservableObject {
         let ref = Database.database().reference().child("chatRoom_messages")
         ref.observe(.childAdded) { snapshot in
             if let messageData = snapshot.value as? [String: Any],
-               let sender = messageData["sender"] as? String,
+               let senderData = messageData["sender"] as? [String: Any],
+               let senderName = senderData["name"] as? String,
+               let senderEmail = senderData["email"] as? String,
                let message = messageData["message"] as? String,
                let timestamp = messageData["timestamp"] as? Double {
+                
+                let sender = User(name: senderName, email: senderEmail)
                 let chatRoomMessage = ChatRoomMessage(sender: sender, message: message, timestamp: timestamp)
+                
                 DispatchQueue.main.async {
                     self.messages.append(chatRoomMessage)
                 }
@@ -37,11 +48,14 @@ class ChatRoomViewModel: ObservableObject {
         }
     }
     
-    func sendChatMessage(sender: String, message: String) {
+    func sendChatMessage(sender: User, message: String) {
         let ref = Database.database().reference().child("chatRoom_messages").childByAutoId()
         let timestamp = Date().timeIntervalSince1970
         let messageData: [String: Any] = [
-            "sender": sender,
+            "sender": [
+                "name": sender.name,
+                "email": sender.email
+            ],
             "message": message,
             "timestamp": timestamp
         ]
@@ -52,13 +66,13 @@ class ChatRoomViewModel: ObservableObject {
 struct ChatRoomView: View {
     @ObservedObject var chatRoomViewModel = ChatRoomViewModel()
     @State private var messageText = ""
-    @State private var senderName = ""
+    @State private var sender: User? = nil
     
     var body: some View {
         VStack {
             List(chatRoomViewModel.messages) { message in
                 VStack(alignment: .leading) {
-                    Text("\(message.sender):")
+                    Text("\(message.sender.name) (\(message.sender.email)):")
                         .font(.headline)
                     Text(message.message)
                 }
@@ -66,10 +80,6 @@ struct ChatRoomView: View {
             .padding()
             
             HStack {
-                TextField("Enter your name", text: $senderName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding()
-                
                 TextField("Enter a message", text: $messageText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding()
@@ -84,11 +94,22 @@ struct ChatRoomView: View {
             }
             .padding()
         }
+        .onAppear(perform: {
+            fetchUserData()
+        })
+    }
+    
+    func fetchUserData() {
+        if let user = Auth.auth().currentUser {
+            let name = user.displayName ?? ""
+            let email = user.email ?? ""
+            sender = User(name: name, email: email)
+        }
     }
     
     func sendMessage() {
-        guard !senderName.isEmpty, !messageText.isEmpty else { return }
-        chatRoomViewModel.sendChatMessage(sender: senderName, message: messageText)
+        guard let sender = sender, !messageText.isEmpty else { return }
+        chatRoomViewModel.sendChatMessage(sender: sender, message: messageText)
         messageText = ""
     }
 }
@@ -97,7 +118,7 @@ struct OpenChatRoom: View {
     var body: some View {
         NavigationView {
             ChatRoomView()
-                .navigationTitle("Chat Room")
+                .navigationTitle("Support Room")
         }
     }
 }
@@ -108,5 +129,5 @@ struct OpenChatRoom_Previews: PreviewProvider {
     static var previews: some View {
         OpenChatRoom()
     }
-}*/
+}
 
