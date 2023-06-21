@@ -8,16 +8,21 @@
 import SwiftUI
 
 struct TabViews: View {
+    @State private var selectedTab: Int = 0
+    
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             MainMessagesView()
                 .tabItem {
                     Label("Messages", systemImage: "message" )
                 }
+                .tag(0)
+            
             OpenChatRoom()
                 .tabItem {
                     Label("Support Room", systemImage: "person.3")
                 }
+                .tag(1)
         }
     }
 }

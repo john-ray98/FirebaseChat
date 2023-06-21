@@ -10,7 +10,6 @@ import SDWebImageSwiftUI
 import Firebase
 import FirebaseFirestoreSwift
 
-
 class MainMessagesViewModel: ObservableObject {
     
     @Published var errorMessage = ""
@@ -18,7 +17,7 @@ class MainMessagesViewModel: ObservableObject {
     @Published var isUserCurrentlyLoggedOut = false
     
     init() {
-       
+        
         DispatchQueue.main.async {
             self.isUserCurrentlyLoggedOut = FirebaseManager.shared.auth.currentUser?.uid == nil
         }
@@ -32,19 +31,17 @@ class MainMessagesViewModel: ObservableObject {
     
     private var firestoreListener: ListenerRegistration?
     
-    func fetchRecentMessages() {
-        guard let uid = FirebaseManager.shared.auth.currentUser?.uid
-        else { return }
+    /*func fetchRecentMessages() {
+        guard let uid = FirebaseManager.shared.auth.currentUser?.uid else { return }
         
         firestoreListener?.remove()
         self.recentMessages.removeAll()
         
-        
-      firestoreListener = FirebaseManager.shared.firestore
-            .collection("recent_messages")
+        firestoreListener = FirebaseManager.shared.firestore
+            .collection(FirebaseConstants.recentMessages)
             .document(uid)
-            .collection("messages")
-            .order(by: "timestamp")
+            .collection(FirebaseConstants.messages)
+            .order(by: FirebaseConstants.timestamp)
             .addSnapshotListener { querySnapshot, error in
                 if let error = error {
                     self.errorMessage = "Failed to listen for recent messages: \(error)"
@@ -53,12 +50,11 @@ class MainMessagesViewModel: ObservableObject {
                 }
                 
                 querySnapshot?.documentChanges.forEach({ change in
-                        let docId = change.document.documentID
+                    let docId = change.document.documentID
                     
-                    if let index =
-                        self.recentMessages.firstIndex(where: { rm in
-                            return rm.id == docId
-                        }) {
+                    if let index = self.recentMessages.firstIndex(where: { rm in
+                        return rm.id == docId
+                    }) {
                         self.recentMessages.remove(at: index)
                     }
                     
@@ -66,24 +62,53 @@ class MainMessagesViewModel: ObservableObject {
                         if let rm = try? change.document.data(as: RecentMessage.self) {
                             self.recentMessages.insert(rm, at: 0)
                         }
-                       } catch {
-                       print(error)
+                    } catch {
+                        print(error)
+                    }
+                })
+            }
+    }*/
+    
+    func fetchRecentMessages() {
+        guard let uid = FirebaseManager.shared.auth.currentUser?.uid else { return }
+        
+        firestoreListener?.remove()
+        self.recentMessages.removeAll()
+        
+        firestoreListener = FirebaseManager.shared.firestore
+            .collection(FirebaseConstants.recentMessages)
+            .document(uid)
+            .collection(FirebaseConstants.messages)
+            .order(by: FirebaseConstants.timestamp, descending: true) // Order messages by timestamp in descending order
+            .addSnapshotListener { [weak self] querySnapshot, error in
+                guard let self = self else { return } // Use weak self to avoid retain cycles
+                
+                if let error = error {
+                    self.errorMessage = "Failed to listen for recent messages: \(error)"
+                    print(error)
+                    return
+                }
+                
+                querySnapshot?.documentChanges.forEach({ change in
+                    let docId = change.document.documentID
+                    
+                    if let index = self.recentMessages.firstIndex(where: { $0.id == docId }) {
+                        self.recentMessages.remove(at: index)
                     }
                     
-                    //self.recentMessages.insert(.init(documentId: docId, data: change.document.data()), at: 0)
-                    
-                 
+                    if let rm = try? change.document.data(as: RecentMessage.self) {
+                        self.recentMessages.insert(rm, at: 0)
+                    }
                 })
             }
     }
+
     
     func fetchCurrentUser() {
-        
         guard let uid = FirebaseManager.shared.auth.currentUser?.uid else {
             self.errorMessage = "Could not find firebase uid"
             return
         }
-        
         
         FirebaseManager.shared.firestore.collection("users").document(uid).getDocument { snapshot, error in
             if let error = error {
@@ -92,19 +117,14 @@ class MainMessagesViewModel: ObservableObject {
                 return
             }
             
-//            self.errorMessage = "123"
-            
             guard let data = snapshot?.data() else {
                 self.errorMessage = "No data found"
                 return
                 
             }
-//            self.errorMessage = "Data: \(data.description)"
+            
             self.chatUser = .init(data: data)
             FirebaseManager.shared.currentUser = self.chatUser
-            
-//            self.errorMessage = chatUser.profileImageUrl
-            
         }
     }
     
@@ -114,173 +134,6 @@ class MainMessagesViewModel: ObservableObject {
     }
     
 }
-
-struct ChatLogView: View {
-    
-    @State private var isShowingImagePicker = false
-    @State private var selectedImage: UIImage?
-    
-    let chatUser: ChatUser?
-    
-    init(chatUser: ChatUser?) {
-        self.chatUser = chatUser
-        self.vm = .init(chatUser: chatUser)
-    }
-    
-    @ObservedObject var vm: ChatLogViewModel
-    
-    var body: some View {
-        ZStack {
-            messagesView
-            Text(vm.errorMessage)
-            VStack(spacing: 0) {
-                Spacer()
-                chatBottomBar
-                    .background(Color.white.ignoresSafeArea())
-                
-            }
-        }
-        .navigationTitle(chatUser?.email ?? "")
-        .navigationBarTitleDisplayMode(.inline)
-        //       .navigationBarItems(trailing: Button(action: {
-        //             vm.count += 1
-        //        }, label: {
-        //             Text("Count: \(vm.count)")
-        //       }))
-    }
-    
-    static let emptyScrollToString = "Empty"
-    
-    private var messagesView: some View {
-        VStack {
-            if #available(iOS 15.0, *) {
-                ScrollView {
-                    ScrollViewReader { scrollViewProxy in
-                        VStack {
-                            ForEach(vm.chatMessages) { message in
-                                MessageView(message: message)
-                                
-                            }
-                            
-                            HStack{ Spacer() }
-                                .id(Self.emptyScrollToString)
-                        }
-                        .onReceive(vm.$count) { _ in
-                            withAnimation(.easeOut(duration: 0.5)) {
-                                scrollViewProxy.scrollTo("Empty", anchor: .bottom)
-                            }
-                        }
-                    }
-                    
-                }
-                .background(Color(.init(white: 0.95, alpha: 1)))
-                .safeAreaInset(edge: .bottom) {
-                    chatBottomBar
-                        .background(Color(.systemBackground))
-                        .ignoresSafeArea()
-                }
-            } else {
-                //fallback on earlier versions
-            }
-        }
-    }
-    
-    
-    private var chatBottomBar: some View {
-        HStack(spacing: 16) {
-            VStack {
-                if let image = selectedImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .padding()
-                }
-              /*  Button(action: {
-                    isShowingImagePicker = true
-                }) {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 24))
-                        .foregroundColor(Color(.darkGray))
-                }
-                .sheet(isPresented: $isShowingImagePicker) {
-                    ImagePicker(image: $selectedImage)
-                }*/
-            }
-            ZStack {
-                DescriptionPlaceholder()
-                TextEditor(text: $vm.chatText)
-                    .opacity(vm.chatText.isEmpty ? 0.5 : 1)
-            }
-            .frame(height: 40)
-            
-            Button {
-                vm.handleSend()
-            } label: {
-                Text("Send")
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.blue)
-            .cornerRadius(4)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-    }
-}
-
-struct MessageView: View {
-    
-    let message: ChatMessage
-    
-    var body: some View {
-        VStack {
-            if message.fromId == FirebaseManager.shared.auth.currentUser?.uid {
-                HStack {
-                    Spacer()
-                    HStack {
-                        Text(message.text)
-                            .foregroundColor(.white)
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(8)
-                }
-                
-            } else {
-                HStack {
-                    HStack {
-                        Text(message.text)
-                            .foregroundColor(.black)
-                    }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(8)
-                    Spacer()
-                }
-            }
-            
-        }
-        .padding(.horizontal)
-        .padding(.top, 8)
-    }
-}
-
-struct DescriptionPlaceholder: View {
-    var body: some View {
-        HStack {
-            Text("Description")
-                .foregroundColor(Color(.gray))
-                .font(.system(size: 17))
-                .padding(.leading, 5)
-                .padding(.top, -4)
-            Spacer()
-        }
-    }
-}
-
-
-
 
 struct MainMessagesView: View {
     
@@ -296,40 +149,35 @@ struct MainMessagesView: View {
         NavigationView {
             
             VStack {
-//            Text("User: \(vm.chatUser?.uid ?? "")")
-                
                 customNavBar
                 messagesView
                 
                 NavigationLink("", isActive: $shouldNavigateToChatLogView) {
-                  ChatLogView(chatUser: self.chatUser)
+                    ChatLogView(chatUser: self.chatUser)
                 }
             }
-           .overlay(
-            newMessageButton, alignment: .bottom)
-        .navigationBarHidden(true)
+            .overlay(
+                newMessageButton, alignment: .bottom)
+            .navigationBarHidden(true)
         }
-
     }
     
     private var customNavBar: some View {
         HStack(spacing: 16) {
-    
-        WebImage(url: URL(string: vm.chatUser?.profileImageUrl ?? ""))
-            .resizable()
-            .scaledToFill()
-            .frame(width: 50, height: 50)
-            .clipped()
-            .cornerRadius(50)
-            .overlay(RoundedRectangle(cornerRadius: 44)
-                                        .stroke(Color(.label), lineWidth: 1)
-                            )
-                            .shadow(radius: 5)
             
+            WebImage(url: URL(string: vm.chatUser?.profileImageUrl ?? ""))
+                .resizable()
+                .scaledToFill()
+                .frame(width: 50, height: 50)
+                .clipped()
+                .cornerRadius(50)
+                .overlay(RoundedRectangle(cornerRadius: 44)
+                            .stroke(Color(.label), lineWidth: 1)
+                )
+                .shadow(radius: 5)
             
             
             VStack(alignment: .leading, spacing: 4) {
-        
                 let email = vm.chatUser?.email.replacingOccurrences(of: "@gmail.com", with: "") ?? ""
                 Text(email)
                     .font(.system(size: 24, weight: .bold))
@@ -356,7 +204,7 @@ struct MainMessagesView: View {
         }
         .padding()
         .actionSheet(isPresented: $shouldShowLogOutOptions) {
-            .init(title: Text("Done sharing?"), message: Text("Are you sure?"), buttons: [
+            .init(title: Text("Settings"), message: Text("What do you want to do?"), buttons: [
                 .destructive(Text("Sign Out"), action: {
                     print("handle sign out")
                     vm.handleSignOut()
@@ -366,18 +214,23 @@ struct MainMessagesView: View {
         }
         .fullScreenCover(isPresented: $vm.isUserCurrentlyLoggedOut, onDismiss: nil) {
             LoginView(didCompleteLoginProcess: {
-                self.vm.isUserCurrentlyLoggedOut = false
-                self.vm.fetchCurrentUser()
-                self.vm.fetchRecentMessages()
+                vm.isUserCurrentlyLoggedOut = false
+                vm.fetchCurrentUser()
+                vm.fetchRecentMessages()
+              
+                
             })
         }
     }
     
     private var messagesView: some View {
         ScrollView {
+            
             ForEach(vm.recentMessages) { recentMessage in
+                
                 VStack {
                     Button {
+                        print("\(vm.recentMessages) here")
                         let uid = FirebaseManager.shared.auth.currentUser?.uid == recentMessage.fromId ? recentMessage.toId : recentMessage.fromId
                         self.chatUser = .init(data: [FirebaseConstants.email: recentMessage.email, FirebaseConstants.profileImageUrl: recentMessage.profileImageUrl, FirebaseConstants.uid: uid])
                         self.chatLogViewModel.chatUser = self.chatUser
@@ -386,15 +239,14 @@ struct MainMessagesView: View {
                     } label: {
                         HStack(spacing: 16) {
                             WebImage(url: URL(string: recentMessage.profileImageUrl))
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 50, height: 50)
-                            .clipped()
-                            .cornerRadius(50)
-                            .overlay(RoundedRectangle(cornerRadius: 44)
-                                                        .stroke(Color(.label), lineWidth: 1)
-                                            )
-                                            .shadow(radius: 5)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 64, height: 64)
+                                .clipped()
+                                .cornerRadius(64)
+                                .overlay(RoundedRectangle(cornerRadius: 64)
+                                            .stroke(Color.black, lineWidth: 1))
+                                .shadow(radius: 5)
                             
                             
                             VStack(alignment: .leading, spacing: 8) {
@@ -414,6 +266,8 @@ struct MainMessagesView: View {
                                 .foregroundColor(Color(.label))
                         }
                     }
+
+
                     
                     Divider()
                         .padding(.vertical, 8)
@@ -447,16 +301,23 @@ struct MainMessagesView: View {
                 print(user.email)
                 self.shouldNavigateToChatLogView.toggle()
                 self.chatUser = user
+                self.chatLogViewModel.chatUser = user
+                self.chatLogViewModel.fetchMessages()
             })
         }
     }
+    
     @State var chatUser: ChatUser?
 }
 
 struct MainMessagesView_Previews: PreviewProvider {
     static var previews: some View {
         MainMessagesView()
-           // .preferredColorScheme(.dark)
+            .preferredColorScheme(.dark)
+        
+        MainMessagesView()
     }
 }
+
+
                 

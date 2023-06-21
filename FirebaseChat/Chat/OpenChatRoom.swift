@@ -63,6 +63,39 @@ class ChatRoomViewModel: ObservableObject {
     }
 }
 
+struct KeyboardAdaptive: ViewModifier {
+    @State private var keyboardHeight: CGFloat = 0
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(.bottom, keyboardHeight)
+            .edgesIgnoringSafeArea(keyboardHeight > 0 ? .bottom : [])
+            .onAppear(perform: subscribeToKeyboardEvents)
+            .onDisappear(perform: unsubscribeFromKeyboardEvents)
+            .animation(.easeOut(duration: 0.25))
+    }
+    
+    private func subscribeToKeyboardEvents() {
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+            guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+                return
+            }
+            keyboardHeight = keyboardFrame.height
+        }
+        
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+            keyboardHeight = 0
+        }
+    }
+    
+    private func unsubscribeFromKeyboardEvents() {
+        NotificationCenter.default.removeObserver(self)
+    }
+}
+
+
+
+
 struct ChatRoomView: View {
     @ObservedObject var chatRoomViewModel = ChatRoomViewModel()
     @State private var messageText = ""
@@ -97,6 +130,13 @@ struct ChatRoomView: View {
         .onAppear(perform: {
             fetchUserData()
         })
+        .modifier(KeyboardAdaptive())
+        .gesture (
+        TapGesture()
+            .onEnded { _ in
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+        )
     }
     
     func fetchUserData() {
@@ -114,15 +154,18 @@ struct ChatRoomView: View {
     }
 }
 
-struct OpenChatRoom: View {
-    var body: some View {
-        NavigationView {
-            ChatRoomView()
-                .navigationTitle("Support Room")
-        }
-    }
-}
-
+    
+    struct OpenChatRoom: View {
+        
+        var body: some View {
+            NavigationView {
+                
+                ChatRoomView()
+                    .navigationTitle("Support Room")
+            }
+            }
+            }
+        
 
 
 struct OpenChatRoom_Previews: PreviewProvider {
